@@ -3,72 +3,103 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-st.set_page_config(page_title="Orientação Espiritual V7", layout="centered")
+# =========================
+# CONFIGURAÇÃO
+# =========================
+st.set_page_config(page_title="Reflexões e Direcionamento Pessoal", layout="centered")
 
-st.title("📖 Orientação Espiritual V7")
-st.write("Mensagem espiritual em texto contínuo, baseada em princípios kardecistas.")
+st.title("📖 Reflexões e Direcionamento Pessoal")
+st.write("Descreva sua situação e receba uma reflexão clara, humana e prática para te ajudar a organizar seus pensamentos.")
 
 # =========================
-# BASE
+# CARREGAR BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-data = [item for item in raw_data if item.get("contexto")]
+# =========================
+# LIMPEZA DA BASE (ANTI-RUÍDO)
+# =========================
+data = []
+
+for item in raw_data:
+    contexto = item.get("contexto", "").strip()
+    mensagem = item.get("mensagem", "").strip()
+
+    if contexto and mensagem:
+        data.append(item)
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA
+# DETECÇÃO DE TIPO DE SITUAÇÃO
 # =========================
-def buscar(pergunta):
+def detectar_tipo(texto):
+    t = texto.lower()
+
+    if any(w in t for w in ["emprego", "dinheiro", "desempregado", "contas", "aluguel"]):
+        return "crise_material"
+
+    if any(w in t for w in ["traição", "separação", "relacionamento", "casamento"]):
+        return "crise_afetiva"
+
+    if any(w in t for w in ["triste", "desespero", "vazio", "ansioso"]):
+        return "crise_emocional"
+
+    return "geral"
+
+# =========================
+# BUSCA INTELIGENTE (SEM RUÍDO)
+# =========================
+def buscar_melhor(pergunta):
     emb = model.encode([pergunta])[0]
 
     sim = np.dot(embeddings, emb) / (
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
+    # pega só o melhor resultado (zero poluição)
     idx = np.argmax(sim)
+
     return data[idx]
 
 # =========================
-# GERAÇÃO DE TEXTO FINAL (ESSÊNCIA DO V7)
+# GERAÇÃO DE TEXTO LIMPO (SEM FRAGMENTOS)
 # =========================
 def gerar_texto(item, pergunta):
 
-    intro = (
-        "Diante da situação que você está vivendo, é natural que surjam sentimentos de angústia e incerteza, "
-        "especialmente quando envolve responsabilidades importantes e o medo do futuro."
+    abertura = (
+        "Diante da situação que você está enfrentando, é natural que surjam sentimentos de preocupação, insegurança e sobrecarga emocional, "
+        "especialmente quando há responsabilidades importantes envolvidas."
     )
 
     corpo = item.get("mensagem", "")
 
     fechamento = (
-        "Segundo a visão espiritualista presente nas obras de Emmanuel, André Luiz e nos ensinamentos transmitidos por "
-        "Chico Xavier e Divaldo Franco, as dificuldades não representam abandono, mas oportunidades de fortalecimento interior, "
-        "reorganização emocional e aprendizado gradual. Ainda que a dor seja real, ela não é permanente, e pode ser transformada "
-        "pela fé ativa, pela serenidade e pela ação responsável no presente."
+        "Em momentos como este, o mais importante é organizar o pensamento, focar no que pode ser feito no presente e evitar decisões tomadas apenas pela emoção imediata. "
+        "Com o tempo, situações difíceis tendem a se reorganizar quando enfrentadas com calma, clareza e ação prática."
     )
 
-    return f"{intro}\n\n{corpo}\n\n{fechamento}"
+    return f"{abertura} {corpo} {fechamento}"
 
 # =========================
 # INPUT
 # =========================
 pergunta = st.text_area("🧠 Descreva sua situação")
 
-if st.button("Receber orientação"):
+if st.button("Receber análise"):
+
     if not pergunta.strip():
-        st.warning("Digite sua situação.")
+        st.warning("Por favor, descreva sua situação.")
     else:
-        item = buscar(pergunta)
+
+        tipo = detectar_tipo(pergunta)
+        item = buscar_melhor(pergunta)
 
         resposta = gerar_texto(item, pergunta)
 
-        st.markdown("## 📖 Orientação espiritual")
+        st.markdown("## 📖 Reflexão e Direcionamento")
         st.success(resposta)
-
-        st.caption(f"Base conceitual: {item.get('livro','')} ({item.get('ano','')})")
