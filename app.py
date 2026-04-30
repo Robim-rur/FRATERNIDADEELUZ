@@ -3,10 +3,10 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-st.set_page_config(page_title="Orientação Espiritual V6", layout="centered")
+st.set_page_config(page_title="Orientação Espiritual V7", layout="centered")
 
-st.title("📖 Orientação Espiritual V6")
-st.write("Sistema de orientação com foco em crise emocional real.")
+st.title("📖 Orientação Espiritual V7")
+st.write("Mensagem espiritual em texto contínuo, baseada em princípios kardecistas.")
 
 # =========================
 # BASE
@@ -22,24 +22,7 @@ texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# DETECÇÃO DE CRISE
-# =========================
-def detectar_crise(texto):
-    t = texto.lower()
-
-    if any(w in t for w in ["desesper", "sem dinheiro", "emprego", "filho", "contas", "aluguel"]):
-        return "crise_material"
-
-    if any(w in t for w in ["traição", "separação", "termino"]):
-        return "crise_afetiva"
-
-    if any(w in t for w in ["triste", "depress", "vazio"]):
-        return "crise_emocional"
-
-    return "geral"
-
-# =========================
-# BUSCA INTELIGENTE
+# BUSCA
 # =========================
 def buscar(pergunta):
     emb = model.encode([pergunta])[0]
@@ -48,53 +31,44 @@ def buscar(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    idx_sorted = np.argsort(sim)[::-1]
+    idx = np.argmax(sim)
+    return data[idx]
 
-    return [data[i] for i in idx_sorted]
+# =========================
+# GERAÇÃO DE TEXTO FINAL (ESSÊNCIA DO V7)
+# =========================
+def gerar_texto(item, pergunta):
+
+    intro = (
+        "Diante da situação que você está vivendo, é natural que surjam sentimentos de angústia e incerteza, "
+        "especialmente quando envolve responsabilidades importantes e o medo do futuro."
+    )
+
+    corpo = item.get("mensagem", "")
+
+    fechamento = (
+        "Segundo a visão espiritualista presente nas obras de Emmanuel, André Luiz e nos ensinamentos transmitidos por "
+        "Chico Xavier e Divaldo Franco, as dificuldades não representam abandono, mas oportunidades de fortalecimento interior, "
+        "reorganização emocional e aprendizado gradual. Ainda que a dor seja real, ela não é permanente, e pode ser transformada "
+        "pela fé ativa, pela serenidade e pela ação responsável no presente."
+    )
+
+    return f"{intro}\n\n{corpo}\n\n{fechamento}"
 
 # =========================
 # INPUT
 # =========================
-pergunta = st.text_area("🧠 Conte sua situação")
+pergunta = st.text_area("🧠 Descreva sua situação")
 
-if st.button("Analisar"):
+if st.button("Receber orientação"):
     if not pergunta.strip():
         st.warning("Digite sua situação.")
     else:
+        item = buscar(pergunta)
 
-        crise = detectar_crise(pergunta)
-        resultados = buscar(pergunta)
+        resposta = gerar_texto(item, pergunta)
 
-        principal = resultados[0]
-        secundario = resultados[1] if len(resultados) > 1 else None
+        st.markdown("## 📖 Orientação espiritual")
+        st.success(resposta)
 
-        # =========================
-        # INTRO HUMANA (ESSENCIAL)
-        # =========================
-        if crise == "crise_material":
-            st.error("Perder o emprego enquanto se tem responsabilidade familiar é uma das situações mais desafiadoras emocionalmente, pois envolve medo, pressão e urgência prática.")
-
-        elif crise == "crise_afetiva":
-            st.error("Situações de ruptura afetiva geram impacto profundo na estrutura emocional e no senso de estabilidade pessoal.")
-
-        else:
-            st.info("Sua situação envolve um processo emocional que exige compreensão e reorganização interna.")
-
-        # =========================
-        # RESPOSTA PRINCIPAL
-        # =========================
-        st.markdown("## 💛 Direcionamento principal")
-        st.success(principal["mensagem"])
-
-        st.markdown("## 🧭 Orientação prática")
-        st.warning(principal["direcionamento"])
-
-        st.markdown(f"📚 Livro: **{principal['livro']}**")
-
-        # =========================
-        # COMPLEMENTO (SE RELEVANTE)
-        # =========================
-        if secundario:
-            st.markdown("---")
-            st.markdown("## 📖 Complemento")
-            st.info(secundario["mensagem"])
+        st.caption(f"Base conceitual: {item.get('livro','')} ({item.get('ano','')})")
