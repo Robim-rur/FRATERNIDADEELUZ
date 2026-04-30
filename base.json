@@ -1,82 +1,26 @@
 [
   {
-    "contexto": "ansiedade medo futuro preocupação incerteza vida financeira trabalho",
-    "emocional": "Você pode estar vivendo tensão mental e excesso de projeção do futuro, com sensação de insegurança constante.",
-    "mensagem": "A ansiedade nasce quando a mente tenta controlar o que ainda não existe. A serenidade vem do foco no presente e na ação possível.",
-    "direcionamento": "Reduza o excesso de antecipação e organize pequenas ações concretas para hoje.",
-    "livro": "Pão Nosso",
-    "ano": 1960
+    "contexto": "perda de emprego e dificuldades financeiras",
+    "tags": ["trabalho", "dinheiro", "crise_material"],
+    "mensagem": "Em momentos de perda profissional, é importante reorganizar os próximos passos com calma e foco no que pode ser feito no presente. Situações como essa exigem ação prática gradual e não decisões tomadas no desespero.",
+    "tipo": "material"
   },
   {
-    "contexto": "traição infidelidade casamento quebra de confiança dor relacionamento amoroso",
-    "emocional": "Há um impacto emocional forte ligado à quebra de confiança e desorganização afetiva.",
-    "mensagem": "As experiências de ruptura afetiva exigem tempo interno de reorganização e compreensão antes de decisões definitivas.",
-    "direcionamento": "Evite decisões impulsivas. Observe sentimentos antes de agir no relacionamento.",
-    "livro": "Fonte Viva",
-    "ano": 1956
+    "contexto": "desespero por responsabilidade com filhos",
+    "tags": ["família", "filhos", "pressão_emocional"],
+    "mensagem": "Quando existe responsabilidade com filhos, o sentimento de pressão pode ser intenso. Ainda assim, pequenas ações consistentes tendem a trazer estabilidade ao longo do tempo.",
+    "tipo": "material"
   },
   {
-    "contexto": "abandono separação término solidão rejeição amor dor emocional",
-    "emocional": "Sensação de vazio emocional, perda de vínculo e dificuldade de adaptação à ausência.",
-    "mensagem": "Toda separação ativa processos internos de reconstrução emocional e autoconhecimento.",
-    "direcionamento": "Busque apoio emocional e evite isolamento prolongado.",
-    "livro": "Pão Nosso",
-    "ano": 1960
+    "contexto": "tristeza profunda e ansiedade",
+    "tags": ["emocional", "ansiedade", "tristeza"],
+    "mensagem": "Em momentos de ansiedade, o mais importante é reduzir a carga mental e focar em um passo de cada vez, sem tentar resolver tudo de uma vez só.",
+    "tipo": "emocional"
   },
   {
-    "contexto": "injustiça revolta raiva sofrimento dor indignação vida",
-    "emocional": "Há indignação emocional e sensação de desequilíbrio diante de situações vividas.",
-    "mensagem": "Nem tudo que acontece é imediatamente compreensível, mas cada experiência traz aprendizado ao longo do tempo.",
-    "direcionamento": "Evite alimentar revolta contínua e observe a situação com mais distanciamento emocional.",
-    "livro": "Caminho, Verdade e Vida",
-    "ano": 1948
-  },
-  {
-    "contexto": "depressao desânimo tristeza profunda vazio falta de sentido vida",
-    "emocional": "Sensação de esgotamento emocional e perda de sentido interno.",
-    "mensagem": "Momentos de dor profunda podem representar transições internas importantes de reorganização da vida emocional.",
-    "direcionamento": "Procure apoio e evite se isolar completamente durante esse período.",
-    "livro": "Fonte Viva",
-    "ano": 1956
-  },
-  {
-    "contexto": "culpa arrependimento erro passado remorso peso emocional",
-    "emocional": "Sentimento de autocobrança e dificuldade de lidar com decisões passadas.",
-    "mensagem": "O crescimento interior exige compreensão dos próprios erros sem aprisionamento no passado.",
-    "direcionamento": "Transforme a culpa em aprendizado e ação prática de mudança.",
-    "livro": "Emmanuel",
-    "ano": 0
-  },
-  {
-    "contexto": "relacionamento conflito casal briga discussão desgaste amor",
-    "emocional": "Tensão emocional ligada a conflitos e desgaste na convivência afetiva.",
-    "mensagem": "Relacionamentos exigem diálogo, paciência e reconstrução contínua do vínculo.",
-    "direcionamento": "Evite escalada de conflitos e busque comunicação mais calma.",
-    "livro": "Vinha de Luz",
-    "ano": 1949
-  },
-  {
-    "contexto": "identidade orientação sexual homossexualidade aceitação familiar rejeição conflito interno",
-    "emocional": "Pode haver conflito entre identidade pessoal, pertencimento e aceitação social ou familiar.",
-    "mensagem": "Experiências de identidade e pertencimento exigem autocompreensão e respeito interno, sem julgamentos externos rígidos.",
-    "direcionamento": "Busque ambientes seguros de diálogo e apoio emocional construtivo.",
-    "livro": "Emmanuel (Chico Xavier)",
-    "ano": 0
-  },
-  {
-    "contexto": "medo insegurança futuro trabalho dinheiro instabilidade vida",
-    "emocional": "Sensação de instabilidade emocional associada ao futuro e sustento.",
-    "mensagem": "O medo do futuro se reduz quando há ação consistente no presente.",
-    "direcionamento": "Organize pequenas metas práticas e evite paralisia por preocupação.",
-    "livro": "Caminho, Verdade e Vida",
-    "ano": 1948
-  },
-  {
-    "contexto": "perdão magoa ressentimento dor emocional relacionamento passado",
-    "emocional": "Presença de mágoa acumulada e dificuldade de liberação emocional.",
-    "mensagem": "Perdoar não significa esquecer, mas libertar-se do peso emocional contínuo.",
-    "direcionamento": "Trabalhe o perdão como processo gradual, não como obrigação imediata.",
-    "livro": "Fonte Viva",
-    "ano": 1956
+    "contexto": "término de relacionamento ou separação",
+    "tags": ["amor", "relacionamento", "afetivo"],
+    "mensagem": "Rupturas emocionais exigem tempo para reorganização interna. Evitar decisões impulsivas ajuda a reduzir arrependimentos futuros.",
+    "tipo": "afetivo"
   }
 ]
