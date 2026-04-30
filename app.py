@@ -9,34 +9,32 @@ from sentence_transformers import SentenceTransformer
 st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 
 st.title("💬 Reflexões e Direcionamento Pessoal")
-st.write("Converse livremente. Vou te ajudar a organizar seus pensamentos de forma clara e prática.")
+st.write("Converse livremente e receba uma reflexão clara e útil.")
 
 # =========================
-# CHAT MEMORY
+# CHAT
 # =========================
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
 # =========================
-# LOAD BASE
+# BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# FILTRA APENAS ITENS COMPLETOS (CORREÇÃO PRINCIPAL)
-data = []
-for item in raw_data:
-    if item.get("contexto") and item.get("mensagem"):
-        if len(item["mensagem"].strip()) > 10:
-            data.append(item)
+data = [
+    item for item in raw_data
+    if item.get("contexto") and item.get("mensagem") and len(item["mensagem"].strip()) > 20
+]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA SEGURA
+# BUSCA REAL (CORRIGIDA)
 # =========================
 def buscar(pergunta):
     emb = model.encode([pergunta])[0]
@@ -45,12 +43,11 @@ def buscar(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    idx_sorted = np.argsort(sim)[::-1]
+    top_idx = np.argsort(sim)[-5:][::-1]
 
-    # pega TOP 3 para segurança
-    for idx in idx_sorted[:3]:
+    for idx in top_idx:
         item = data[idx]
-        if item.get("mensagem") and len(item["mensagem"].strip()) > 10:
+        if item.get("mensagem") and len(item["mensagem"].strip()) > 20:
             return item
 
     return None
@@ -69,24 +66,20 @@ def gerar(pergunta, item):
 
     if not item:
         return (
-            "Entendi o que você está passando. Às vezes, quando tudo parece difícil ao mesmo tempo, "
-            "o mais importante é focar no próximo passo possível, sem tentar resolver tudo de uma vez.\n\n"
-            "Se quiser, me conta um pouco mais da sua situação para eu te ajudar melhor."
+            "Entendo que você está passando por um momento difícil. Quando tudo parece pesado ao mesmo tempo, "
+            "o mais importante é focar no próximo passo possível, mesmo que pequeno. Se quiser, me conta mais um pouco do que está acontecendo."
         )
 
     corpo = limpar(item["mensagem"])
 
-    if not corpo:
-        corpo = "Entendi sua situação. Vamos olhar isso com calma e clareza para encontrar o melhor próximo passo."
-
     fechamento = (
-        "Se quiser, pode continuar me contando — isso ajuda a organizar melhor o que você está vivendo e pensar em soluções mais claras."
+        "Se quiser, me conta mais detalhes — isso ajuda a organizar melhor a situação e pensar em caminhos mais claros para você."
     )
 
     return f"{corpo}\n\n{fechamento}"
 
 # =========================
-# DISPLAY CHAT
+# CHAT DISPLAY
 # =========================
 for msg in st.session_state.chat:
     with st.chat_message(msg["role"]):
