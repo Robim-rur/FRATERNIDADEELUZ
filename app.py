@@ -4,12 +4,12 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 # =========================
-# CONFIGURAÇÃO
+# CONFIG
 # =========================
-st.set_page_config(page_title="Reflexões e Direcionamento Pessoal", layout="centered")
+st.set_page_config(page_title="Reflexões e Direcionamento V9", layout="centered")
 
-st.title("📖 Reflexões e Direcionamento Pessoal")
-st.write("Descreva sua situação e receba uma reflexão clara, humana e prática para te ajudar a organizar seus pensamentos.")
+st.title("📖 Reflexões e Direcionamento Pessoal V9")
+st.write("Sistema com filtragem de contexto para respostas mais coerentes e sem ruído.")
 
 # =========================
 # CARREGAR BASE
@@ -19,87 +19,98 @@ with open("base.json", "r", encoding="utf-8") as f:
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# =========================
-# LIMPEZA DA BASE (ANTI-RUÍDO)
-# =========================
-data = []
-
-for item in raw_data:
-    contexto = item.get("contexto", "").strip()
-    mensagem = item.get("mensagem", "").strip()
-
-    if contexto and mensagem:
-        data.append(item)
+data = [item for item in raw_data if item.get("contexto")]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# DETECÇÃO DE TIPO DE SITUAÇÃO
+# CLASSIFICAÇÃO DE CONTEXTO (ESSENCIAL DO V9)
 # =========================
-def detectar_tipo(texto):
+def classificar_contexto(texto):
     t = texto.lower()
 
-    if any(w in t for w in ["emprego", "dinheiro", "desempregado", "contas", "aluguel"]):
-        return "crise_material"
+    if any(w in t for w in ["emprego", "dinheiro", "contas", "aluguel", "desempregado"]):
+        return "material"
 
-    if any(w in t for w in ["traição", "separação", "relacionamento", "casamento"]):
-        return "crise_afetiva"
+    if any(w in t for w in ["traição", "separação", "casamento", "relacionamento"]):
+        return "afetivo"
 
-    if any(w in t for w in ["triste", "desespero", "vazio", "ansioso"]):
-        return "crise_emocional"
+    if any(w in t for w in ["triste", "desespero", "ansioso", "vazio"]):
+        return "emocional"
 
     return "geral"
 
 # =========================
-# BUSCA INTELIGENTE (SEM RUÍDO)
+# BUSCA COM FILTRO DE CONTEXO (CORE DO V9)
 # =========================
-def buscar_melhor(pergunta):
+def buscar_filtrado(pergunta, tipo):
     emb = model.encode([pergunta])[0]
 
     sim = np.dot(embeddings, emb) / (
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    # pega só o melhor resultado (zero poluição)
-    idx = np.argmax(sim)
+    candidatos = []
 
-    return data[idx]
+    for i, item in enumerate(data):
+        contexto = item["contexto"].lower()
+
+        # FILTRO OBRIGATÓRIO POR TIPO
+        if tipo == "material" and any(w in contexto for w in ["emprego", "dinheiro", "contas", "trabalho"]):
+            candidatos.append((sim[i], item))
+
+        elif tipo == "afetivo" and any(w in contexto for w in ["traição", "relacionamento", "casamento", "amor"]):
+            candidatos.append((sim[i], item))
+
+        elif tipo == "emocional" and any(w in contexto for w in ["triste", "desespero", "ansiedade", "vazio"]):
+            candidatos.append((sim[i], item))
+
+        elif tipo == "geral":
+            candidatos.append((sim[i], item))
+
+    # fallback se filtro ficar vazio
+    if not candidatos:
+        candidatos = list(zip(sim, data))
+
+    # pega o melhor dentro do grupo correto
+    candidatos.sort(reverse=True, key=lambda x: x[0])
+
+    return candidatos[0][1]
 
 # =========================
-# GERAÇÃO DE TEXTO LIMPO (SEM FRAGMENTOS)
+# TEXTO FINAL LIMPO
 # =========================
-def gerar_texto(item, pergunta):
-
-    abertura = (
-        "Diante da situação que você está enfrentando, é natural que surjam sentimentos de preocupação, insegurança e sobrecarga emocional, "
+def gerar_resposta(item):
+    intro = (
+        "Diante da situação que você está vivendo, é compreensível que surjam preocupações e sensação de pressão emocional, "
         "especialmente quando há responsabilidades importantes envolvidas."
     )
 
     corpo = item.get("mensagem", "")
 
     fechamento = (
-        "Em momentos como este, o mais importante é organizar o pensamento, focar no que pode ser feito no presente e evitar decisões tomadas apenas pela emoção imediata. "
-        "Com o tempo, situações difíceis tendem a se reorganizar quando enfrentadas com calma, clareza e ação prática."
+        "Nessas situações, o mais importante é organizar os próximos passos de forma prática, sem se sobrecarregar com tudo de uma vez. "
+        "Com o tempo, ações consistentes tendem a reorganizar a realidade de maneira mais estável e clara."
     )
 
-    return f"{abertura} {corpo} {fechamento}"
+    return f"{intro} {corpo} {fechamento}"
 
 # =========================
 # INPUT
 # =========================
 pergunta = st.text_area("🧠 Descreva sua situação")
 
-if st.button("Receber análise"):
+if st.button("Analisar"):
 
     if not pergunta.strip():
-        st.warning("Por favor, descreva sua situação.")
+        st.warning("Digite sua situação.")
     else:
 
-        tipo = detectar_tipo(pergunta)
-        item = buscar_melhor(pergunta)
+        tipo = classificar_contexto(pergunta)
+        item = buscar_filtrado(pergunta, tipo)
 
-        resposta = gerar_texto(item, pergunta)
+        resposta = gerar_resposta(item)
 
         st.markdown("## 📖 Reflexão e Direcionamento")
         st.success(resposta)
