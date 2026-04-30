@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import random
 
 # =========================
 # CONFIG
@@ -9,7 +10,6 @@ from sentence_transformers import SentenceTransformer
 st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 
 st.title("💬 Reflexões e Direcionamento Pessoal")
-st.write("Converse livremente. A resposta será sempre única e contextual.")
 
 # =========================
 # CHAT
@@ -18,22 +18,40 @@ if "chat" not in st.session_state:
     st.session_state.chat = []
 
 # =========================
-# BASE (SÓ REFERÊNCIA)
+# BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-data = [item for item in raw_data if item.get("contexto")]
+data = [item for item in raw_data if item.get("contexto") and item.get("mensagem")]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA SEMANTICA (NÃO USA TEXTO DIRETO)
+# CLASSIFICAÇÃO SIMPLES DE INTENÇÃO
 # =========================
-def buscar_contexto(pergunta):
+def classificar(texto):
+
+    t = texto.lower()
+
+    if any(x in t for x in ["emprego", "dinheiro", "trabalho"]):
+        return "financeiro"
+
+    if any(x in t for x in ["fome", "comer", "filho", "casa"]):
+        return "familiar"
+
+    if any(x in t for x in ["desespero", "ansioso", "triste"]):
+        return "emocional"
+
+    return "geral"
+
+# =========================
+# BUSCA MELHORADA
+# =========================
+def buscar(pergunta):
 
     emb = model.encode([pergunta])[0]
 
@@ -41,47 +59,39 @@ def buscar_contexto(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    top_idx = np.argsort(sim)[-5:][::-1]
+    top_idx = np.argsort(sim)[-7:][::-1]
 
-    # pega apenas referências, não respostas prontas
-    referencias = [data[i]["contexto"] for i in top_idx]
-
-    return referencias
+    return data[random.choice(top_idx)]
 
 # =========================
-# 🔥 GERAÇÃO 100% CONTEXTUAL (SEM FRASE PRONTA)
+# GERADOR DE RESPOSTA EVOLUÍDO
 # =========================
-def gerar_resposta(pergunta, referencias):
+def gerar_resposta(pergunta, item):
 
-    contexto_base = " | ".join(referencias)
+    tipo = classificar(pergunta)
 
-    prompt = f"""
-Você é um assistente de apoio reflexivo humano.
+    base = item["mensagem"]
 
-Use apenas as ideias como referência, mas NUNCA copie frases.
+    if tipo == "financeiro":
+        ajuste = "O mais importante agora é focar em soluções práticas e imediatas, sem se sobrecarregar com tudo de uma vez."
 
-Ideias base:
-{contexto_base}
+    elif tipo == "familiar":
+        ajuste = "Quando envolve família, o impacto emocional é maior, mas o próximo passo precisa ser simples e possível dentro da sua realidade."
 
-Situação da pessoa:
-{pergunta}
+    elif tipo == "emocional":
+        ajuste = "Nesse momento, o mais importante é reduzir a pressão interna e organizar um passo de cada vez."
 
-Responda de forma natural, contínua e humana, como uma conversa.
-Não use frases prontas.
-Não repita estruturas.
-Não use introduções fixas.
+    else:
+        ajuste = "Vamos organizar isso de forma simples e clara para você conseguir enxergar melhor a situação."
 
-Responda diretamente à situação da pessoa.
-"""
+    finais = [
+        "Se quiser, me conta mais detalhes.",
+        "Se quiser, posso te ajudar a organizar melhor isso.",
+        "Se quiser, seguimos passo a passo juntos.",
+        "Se quiser, me diga como isso está acontecendo hoje."
+    ]
 
-    # aqui simulamos geração (sem IA externa, mas já estruturado corretamente)
-    resposta = (
-        f"Entendo o que você está passando. Isso é uma situação que gera muita pressão emocional e prática ao mesmo tempo. "
-        f"O mais importante agora não é tentar resolver tudo de uma vez, mas sim focar no próximo passo possível dentro da sua realidade. "
-        f"Se você quiser, podemos pensar juntos em pequenas ações concretas para lidar com isso de forma mais organizada."
-    )
-
-    return resposta
+    return f"{base} {ajuste} {random.choice(finais)}"
 
 # =========================
 # CHAT DISPLAY
@@ -99,9 +109,9 @@ if user_input:
 
     st.session_state.chat.append({"role": "user", "content": user_input})
 
-    referencias = buscar_contexto(user_input)
+    item = buscar(user_input)
 
-    resposta = gerar_resposta(user_input, referencias)
+    resposta = gerar_resposta(user_input, item)
 
     st.session_state.chat.append({"role": "assistant", "content": resposta})
 
