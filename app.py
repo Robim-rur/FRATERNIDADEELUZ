@@ -4,33 +4,35 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 # =========================
-# CONFIG CHAT
+# CONFIGURAÇÃO GERAL
 # =========================
-st.set_page_config(page_title="Reflexões", layout="centered")
+st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 
-st.title("💬 Reflexões e Direcionamento")
+st.title("💬 Reflexões e Direcionamento Pessoal")
+st.write("Converse livremente. Vou te ajudar a organizar seus pensamentos de forma clara e prática.")
 
 # =========================
-# MEMÓRIA DE CHAT (SESSION)
+# HISTÓRICO DE CHAT
 # =========================
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
 # =========================
-# BASE
+# CARREGAR BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-data = [item for item in raw_data if item.get("contexto")]
+# filtra apenas itens válidos
+data = [item for item in raw_data if item.get("contexto") and item.get("mensagem")]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA
+# BUSCA INTELIGENTE
 # =========================
 def buscar(pergunta):
     emb = model.encode([pergunta])[0]
@@ -43,39 +45,48 @@ def buscar(pergunta):
     return data[idx]
 
 # =========================
-# RESPOSTA HUMANA (SEM FORMALIDADE)
+# LIMPEZA DE RUÍDO (CORREÇÃO REAL)
+# =========================
+def limpar_texto(texto):
+    # remove frase problemática específica caso exista na base
+    frase_ruim = "O crescimento interior exige compreensão dos próprios erros sem aprisionamento no passado."
+    return texto.replace(frase_ruim, "").strip()
+
+# =========================
+# GERAÇÃO FINAL (SEM RUÍDO)
 # =========================
 def gerar_resposta(pergunta, item):
 
-    corpo = item.get("mensagem", "")
+    corpo = limpar_texto(item.get("mensagem", ""))
 
     fechamento = (
-        "Se quiser, me conta um pouco mais — às vezes entender melhor o contexto ajuda a organizar melhor os próximos passos."
+        "Se quiser, pode continuar me contando — entender melhor o contexto ajuda a organizar melhor os próximos passos de forma mais clara."
     )
 
     return f"{corpo}\n\n{fechamento}"
 
 # =========================
-# MOSTRAR CHAT
+# EXIBIR CHAT
 # =========================
 for msg in st.session_state.chat:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 # =========================
-# INPUT ESTILO CHAT
+# INPUT ESTILO HUMANO
 # =========================
-user_input = st.chat_input("Digite aqui...")
+user_input = st.chat_input("Me conte um pouco do que está acontecendo com você atualmente.")
 
 if user_input:
 
-    # usuário
+    # salva mensagem do usuário
     st.session_state.chat.append({"role": "user", "content": user_input})
 
+    # busca resposta
     item = buscar(user_input)
     resposta = gerar_resposta(user_input, item)
 
-    # assistente
+    # salva resposta
     st.session_state.chat.append({"role": "assistant", "content": resposta})
 
     st.rerun()
