@@ -3,61 +3,54 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# =========================
-# CONFIG
-# =========================
-st.set_page_config(page_title="Orientação Espiritual V4", layout="centered")
+st.set_page_config(page_title="Orientação Espiritual V5", layout="centered")
 
-st.title("📖 Orientação Espiritual V4 (Blindado)")
-st.write("Sistema robusto com validação automática de dados.")
+st.title("📖 Orientação Espiritual V5")
+st.write("Sistema emocional inteligente com interpretação contextual avançada.")
 
 # =========================
-# CARREGAR BASE COM SEGURANÇA
+# CARREGAMENTO SEGURO
 # =========================
-try:
-    with open("base.json", "r", encoding="utf-8") as f:
-        raw_data = json.load(f)
-except Exception as e:
-    st.error("Erro ao carregar base.json")
-    st.stop()
+with open("base.json", "r", encoding="utf-8") as f:
+    raw_data = json.load(f)
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # =========================
-# VALIDAÇÃO + LIMPEZA (CORE DO V4)
+# LIMPEZA ROBUSTA
 # =========================
 data = []
 
-for i, item in enumerate(raw_data):
+for item in raw_data:
     contexto = item.get("contexto", "").strip()
 
     if not contexto:
-        st.warning(f"Item {i} ignorado: sem 'contexto'")
         continue
 
-    clean_item = {
-        "contexto": contexto,
-        "emocional": item.get("emocional", "Não informado."),
-        "mensagem": item.get("mensagem", "Sem mensagem disponível."),
-        "direcionamento": item.get("direcionamento", "Reflita com calma sobre sua situação."),
-        "livro": item.get("livro", "Desconhecido"),
-        "ano": item.get("ano", 0)
-    }
-
-    data.append(clean_item)
-
-if len(data) == 0:
-    st.error("Base inválida: nenhum dado utilizável foi encontrado.")
-    st.stop()
-
-# =========================
-# MODELO IA
-# =========================
-model = SentenceTransformer("all-MiniLM-L6-v2")
+    data.append(item)
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA SEMÂNTICA
+# DETECÇÃO SIMPLES DE EMOÇÃO
+# =========================
+def detectar_emocao(texto):
+    texto = texto.lower()
+
+    if any(w in texto for w in ["medo", "ansiedade", "preocupação"]):
+        return "ansiedade"
+    if any(w in texto for w in ["triste", "depress", "vazio"]):
+        return "tristeza"
+    if any(w in texto for w in ["raiva", "revolta", "injustiça"]):
+        return "raiva"
+    if any(w in texto for w in ["traição", "infidelidade"]):
+        return "dor afetiva"
+
+    return "neutro"
+
+# =========================
+# BUSCA INTELIGENTE
 # =========================
 def buscar(pergunta):
     emb = model.encode([pergunta])[0]
@@ -79,20 +72,23 @@ if st.button("Analisar"):
     if not pergunta.strip():
         st.warning("Digite algo.")
     else:
+        emocao = detectar_emocao(pergunta)
         resultados = buscar(pergunta)
+
+        st.info(f"🎯 Emoção detectada: {emocao}")
 
         for r in resultados:
 
             st.markdown("## 💛 Leitura emocional")
-            st.info(r["emocional"])
+            st.info(r.get("emocional", ""))
 
             st.markdown("## 📖 Reflexão")
-            st.success(r["mensagem"])
+            st.success(r.get("mensagem", ""))
 
             st.markdown("## 🧭 Direcionamento")
-            st.warning(r["direcionamento"])
+            st.warning(r.get("direcionamento", ""))
 
-            st.markdown(f"📚 Livro: **{r['livro']}**")
-            st.markdown(f"📅 Ano: **{r['ano']}**")
+            st.markdown(f"📚 Livro: **{r.get('livro','')}**")
+            st.markdown(f"📅 Ano: **{r.get('ano','')}**")
 
             st.markdown("---")
