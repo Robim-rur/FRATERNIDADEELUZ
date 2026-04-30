@@ -3,51 +3,40 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-st.set_page_config(page_title="Orientação Espiritual V5", layout="centered")
+st.set_page_config(page_title="Orientação Espiritual V6", layout="centered")
 
-st.title("📖 Orientação Espiritual V5")
-st.write("Sistema emocional inteligente com interpretação contextual avançada.")
+st.title("📖 Orientação Espiritual V6")
+st.write("Sistema de orientação com foco em crise emocional real.")
 
 # =========================
-# CARREGAMENTO SEGURO
+# BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# =========================
-# LIMPEZA ROBUSTA
-# =========================
-data = []
-
-for item in raw_data:
-    contexto = item.get("contexto", "").strip()
-
-    if not contexto:
-        continue
-
-    data.append(item)
+data = [item for item in raw_data if item.get("contexto")]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# DETECÇÃO SIMPLES DE EMOÇÃO
+# DETECÇÃO DE CRISE
 # =========================
-def detectar_emocao(texto):
-    texto = texto.lower()
+def detectar_crise(texto):
+    t = texto.lower()
 
-    if any(w in texto for w in ["medo", "ansiedade", "preocupação"]):
-        return "ansiedade"
-    if any(w in texto for w in ["triste", "depress", "vazio"]):
-        return "tristeza"
-    if any(w in texto for w in ["raiva", "revolta", "injustiça"]):
-        return "raiva"
-    if any(w in texto for w in ["traição", "infidelidade"]):
-        return "dor afetiva"
+    if any(w in t for w in ["desesper", "sem dinheiro", "emprego", "filho", "contas", "aluguel"]):
+        return "crise_material"
 
-    return "neutro"
+    if any(w in t for w in ["traição", "separação", "termino"]):
+        return "crise_afetiva"
+
+    if any(w in t for w in ["triste", "depress", "vazio"]):
+        return "crise_emocional"
+
+    return "geral"
 
 # =========================
 # BUSCA INTELIGENTE
@@ -59,36 +48,53 @@ def buscar(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    top_idx = np.argsort(sim)[-3:][::-1]
+    idx_sorted = np.argsort(sim)[::-1]
 
-    return [data[i] for i in top_idx]
+    return [data[i] for i in idx_sorted]
 
 # =========================
 # INPUT
 # =========================
-pergunta = st.text_area("🧠 Descreva sua situação")
+pergunta = st.text_area("🧠 Conte sua situação")
 
 if st.button("Analisar"):
     if not pergunta.strip():
-        st.warning("Digite algo.")
+        st.warning("Digite sua situação.")
     else:
-        emocao = detectar_emocao(pergunta)
+
+        crise = detectar_crise(pergunta)
         resultados = buscar(pergunta)
 
-        st.info(f"🎯 Emoção detectada: {emocao}")
+        principal = resultados[0]
+        secundario = resultados[1] if len(resultados) > 1 else None
 
-        for r in resultados:
+        # =========================
+        # INTRO HUMANA (ESSENCIAL)
+        # =========================
+        if crise == "crise_material":
+            st.error("Perder o emprego enquanto se tem responsabilidade familiar é uma das situações mais desafiadoras emocionalmente, pois envolve medo, pressão e urgência prática.")
 
-            st.markdown("## 💛 Leitura emocional")
-            st.info(r.get("emocional", ""))
+        elif crise == "crise_afetiva":
+            st.error("Situações de ruptura afetiva geram impacto profundo na estrutura emocional e no senso de estabilidade pessoal.")
 
-            st.markdown("## 📖 Reflexão")
-            st.success(r.get("mensagem", ""))
+        else:
+            st.info("Sua situação envolve um processo emocional que exige compreensão e reorganização interna.")
 
-            st.markdown("## 🧭 Direcionamento")
-            st.warning(r.get("direcionamento", ""))
+        # =========================
+        # RESPOSTA PRINCIPAL
+        # =========================
+        st.markdown("## 💛 Direcionamento principal")
+        st.success(principal["mensagem"])
 
-            st.markdown(f"📚 Livro: **{r.get('livro','')}**")
-            st.markdown(f"📅 Ano: **{r.get('ano','')}**")
+        st.markdown("## 🧭 Orientação prática")
+        st.warning(principal["direcionamento"])
 
+        st.markdown(f"📚 Livro: **{principal['livro']}**")
+
+        # =========================
+        # COMPLEMENTO (SE RELEVANTE)
+        # =========================
+        if secundario:
             st.markdown("---")
+            st.markdown("## 📖 Complemento")
+            st.info(secundario["mensagem"])
