@@ -3,17 +3,54 @@ import json
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-st.set_page_config(page_title="Orientação Espiritual V3", layout="centered")
+# =========================
+# CONFIG
+# =========================
+st.set_page_config(page_title="Orientação Espiritual V4", layout="centered")
 
-st.title("📖 Orientação Espiritual V3")
-st.write("Descreva sua situação e receba uma leitura emocional + reflexão + direcionamento.")
+st.title("📖 Orientação Espiritual V4 (Blindado)")
+st.write("Sistema robusto com validação automática de dados.")
 
 # =========================
-# BASE
+# CARREGAR BASE COM SEGURANÇA
 # =========================
-with open("base.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+try:
+    with open("base.json", "r", encoding="utf-8") as f:
+        raw_data = json.load(f)
+except Exception as e:
+    st.error("Erro ao carregar base.json")
+    st.stop()
 
+# =========================
+# VALIDAÇÃO + LIMPEZA (CORE DO V4)
+# =========================
+data = []
+
+for i, item in enumerate(raw_data):
+    contexto = item.get("contexto", "").strip()
+
+    if not contexto:
+        st.warning(f"Item {i} ignorado: sem 'contexto'")
+        continue
+
+    clean_item = {
+        "contexto": contexto,
+        "emocional": item.get("emocional", "Não informado."),
+        "mensagem": item.get("mensagem", "Sem mensagem disponível."),
+        "direcionamento": item.get("direcionamento", "Reflita com calma sobre sua situação."),
+        "livro": item.get("livro", "Desconhecido"),
+        "ano": item.get("ano", 0)
+    }
+
+    data.append(clean_item)
+
+if len(data) == 0:
+    st.error("Base inválida: nenhum dado utilizável foi encontrado.")
+    st.stop()
+
+# =========================
+# MODELO IA
+# =========================
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 texts = [item["contexto"] for item in data]
@@ -29,45 +66,33 @@ def buscar(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    idx = np.argsort(sim)[-3:][::-1]
-    return [data[i] for i in idx]
+    top_idx = np.argsort(sim)[-3:][::-1]
 
-# =========================
-# GERADOR DE RESPOSTA V3
-# =========================
-def gerar_resposta(item, pergunta):
-    return {
-        "emocional": item["emocional"],
-        "reflexao": item["mensagem"],
-        "direcionamento": item["direcionamento"],
-        "livro": item["livro"],
-        "ano": item["ano"]
-    }
+    return [data[i] for i in top_idx]
 
 # =========================
 # INPUT
 # =========================
-pergunta = st.text_area("🧠 O que está acontecendo na sua vida?")
+pergunta = st.text_area("🧠 Descreva sua situação")
 
-if st.button("Analisar situação"):
+if st.button("Analisar"):
     if not pergunta.strip():
-        st.warning("Digite sua situação.")
+        st.warning("Digite algo.")
     else:
         resultados = buscar(pergunta)
 
         for r in resultados:
-            resposta = gerar_resposta(r, pergunta)
 
             st.markdown("## 💛 Leitura emocional")
-            st.info(resposta["emocional"])
+            st.info(r["emocional"])
 
             st.markdown("## 📖 Reflexão")
-            st.success(resposta["reflexao"])
+            st.success(r["mensagem"])
 
-            st.markdown("## 🧭 Direcionamento prático")
-            st.warning(resposta["direcionamento"])
+            st.markdown("## 🧭 Direcionamento")
+            st.warning(r["direcionamento"])
 
-            st.markdown(f"📚 Livro: **{resposta['livro']}**")
-            st.markdown(f"📅 Ano: **{resposta['ano']}**")
+            st.markdown(f"📚 Livro: **{r['livro']}**")
+            st.markdown(f"📅 Ano: **{r['ano']}**")
 
             st.markdown("---")
