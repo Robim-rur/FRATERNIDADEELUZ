@@ -4,7 +4,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 # =========================
-# CONFIGURAÇÃO GERAL
+# CONFIG
 # =========================
 st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 
@@ -12,27 +12,31 @@ st.title("💬 Reflexões e Direcionamento Pessoal")
 st.write("Converse livremente. Vou te ajudar a organizar seus pensamentos de forma clara e prática.")
 
 # =========================
-# HISTÓRICO DE CHAT
+# CHAT MEMORY
 # =========================
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
 # =========================
-# CARREGAR BASE
+# LOAD BASE
 # =========================
 with open("base.json", "r", encoding="utf-8") as f:
     raw_data = json.load(f)
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# filtra apenas itens válidos
-data = [item for item in raw_data if item.get("contexto") and item.get("mensagem")]
+# FILTRA APENAS ITENS COMPLETOS (CORREÇÃO PRINCIPAL)
+data = []
+for item in raw_data:
+    if item.get("contexto") and item.get("mensagem"):
+        if len(item["mensagem"].strip()) > 10:
+            data.append(item)
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA INTELIGENTE
+# BUSCA SEGURA
 # =========================
 def buscar(pergunta):
     emb = model.encode([pergunta])[0]
@@ -41,52 +45,65 @@ def buscar(pergunta):
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    idx = np.argmax(sim)
-    return data[idx]
+    idx_sorted = np.argsort(sim)[::-1]
+
+    # pega TOP 3 para segurança
+    for idx in idx_sorted[:3]:
+        item = data[idx]
+        if item.get("mensagem") and len(item["mensagem"].strip()) > 10:
+            return item
+
+    return None
 
 # =========================
-# LIMPEZA DE RUÍDO (CORREÇÃO REAL)
+# LIMPEZA
 # =========================
-def limpar_texto(texto):
-    # remove frase problemática específica caso exista na base
+def limpar(texto):
     frase_ruim = "O crescimento interior exige compreensão dos próprios erros sem aprisionamento no passado."
     return texto.replace(frase_ruim, "").strip()
 
 # =========================
-# GERAÇÃO FINAL (SEM RUÍDO)
+# RESPOSTA FINAL
 # =========================
-def gerar_resposta(pergunta, item):
+def gerar(pergunta, item):
 
-    corpo = limpar_texto(item.get("mensagem", ""))
+    if not item:
+        return (
+            "Entendi o que você está passando. Às vezes, quando tudo parece difícil ao mesmo tempo, "
+            "o mais importante é focar no próximo passo possível, sem tentar resolver tudo de uma vez.\n\n"
+            "Se quiser, me conta um pouco mais da sua situação para eu te ajudar melhor."
+        )
+
+    corpo = limpar(item["mensagem"])
+
+    if not corpo:
+        corpo = "Entendi sua situação. Vamos olhar isso com calma e clareza para encontrar o melhor próximo passo."
 
     fechamento = (
-        "Se quiser, pode continuar me contando — entender melhor o contexto ajuda a organizar melhor os próximos passos de forma mais clara."
+        "Se quiser, pode continuar me contando — isso ajuda a organizar melhor o que você está vivendo e pensar em soluções mais claras."
     )
 
     return f"{corpo}\n\n{fechamento}"
 
 # =========================
-# EXIBIR CHAT
+# DISPLAY CHAT
 # =========================
 for msg in st.session_state.chat:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
 # =========================
-# INPUT ESTILO HUMANO
+# INPUT
 # =========================
 user_input = st.chat_input("Me conte um pouco do que está acontecendo com você atualmente.")
 
 if user_input:
 
-    # salva mensagem do usuário
     st.session_state.chat.append({"role": "user", "content": user_input})
 
-    # busca resposta
     item = buscar(user_input)
-    resposta = gerar_resposta(user_input, item)
+    resposta = gerar(user_input, item)
 
-    # salva resposta
     st.session_state.chat.append({"role": "assistant", "content": resposta})
 
     st.rerun()
