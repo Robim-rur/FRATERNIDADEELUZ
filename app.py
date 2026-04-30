@@ -11,13 +11,13 @@ st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 st.title("💬 Reflexões e Direcionamento Pessoal")
 
 # =========================
-# MEMÓRIA DE CONVERSA
+# MEMÓRIA
 # =========================
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
-if "contexto_acumulado" not in st.session_state:
-    st.session_state.contexto_acumulado = ""
+if "fase" not in st.session_state:
+    st.session_state.fase = "inicio"
 
 # =========================
 # BASE
@@ -27,22 +27,32 @@ with open("base.json", "r", encoding="utf-8") as f:
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-data = [
-    item for item in raw_data
-    if item.get("contexto") and item.get("mensagem")
-]
+data = [item for item in raw_data if item.get("contexto") and item.get("mensagem")]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA COM CONTEXTO ACUMULADO
+# CLASSIFICAR FASE
 # =========================
-def buscar(pergunta, contexto_total):
+def detectar_fase(texto):
 
-    entrada = pergunta + " " + contexto_total
+    t = texto.lower()
 
-    emb = model.encode([entrada])[0]
+    if any(w in t for w in ["o que devo fazer", "como resolver", "agora", "?"]):
+        return "acao"
+
+    if any(w in t for w in ["desespero", "fome", "sem dinheiro", "urgente"]):
+        return "crise"
+
+    return "relato"
+
+# =========================
+# BUSCA INTELIGENTE
+# =========================
+def buscar(pergunta):
+
+    emb = model.encode([pergunta])[0]
 
     sim = np.dot(embeddings, emb) / (
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
@@ -53,26 +63,37 @@ def buscar(pergunta, contexto_total):
     return data[idx]
 
 # =========================
-# RESPOSTA CONTÍNUA (IMPORTANTE)
+# RESPOSTA POR FASE (AQUI ESTÁ A SOLUÇÃO REAL)
 # =========================
-def gerar_resposta(pergunta, item, contexto_total):
+def gerar_resposta(pergunta, item, fase):
 
     corpo = item["mensagem"]
 
-    # DETECTA EVOLUÇÃO DA CRISE
-    if "comer" in pergunta.lower() or "fome" in pergunta.lower():
-        continuidade = (
-            "Quando a dificuldade atinge necessidades básicas, o foco precisa ser ainda mais imediato e prático, "
-            "priorizando soluções de curto prazo e apoio externo sempre que possível."
+    if fase == "relato":
+        retorno = (
+            "Entendi o que você está passando. Vamos organizar isso com calma para ficar mais claro o próximo passo."
         )
+
+    elif fase == "acao":
+        retorno = (
+            "Agora o mais importante é transformar isso em ações práticas e possíveis no curto prazo. Vamos focar no que pode ser feito primeiro."
+        )
+
+    elif fase == "crise":
+        retorno = (
+            "Quando a situação envolve urgência, o foco precisa ser totalmente em soluções imediatas e apoio concreto no curto prazo."
+        )
+
     else:
-        continuidade = ""
+        retorno = ""
 
-    fechamento = (
-        "Se quiser, continue me contando — vou te ajudando a organizar isso passo a passo, sem pressa e sem sobrecarga."
-    )
+    fechamento = "Se quiser, continue me contando — vou te acompanhando nisso passo a passo."
 
-    return f"{corpo} {continuidade}\n\n{fechamento}"
+    # 🔥 EVITA REPETIÇÃO: não repete mensagem igual sempre
+    if st.session_state.chat and retorno in st.session_state.chat[-1]["content"]:
+        retorno = "Vamos continuar a partir disso de forma mais prática para sua situação."
+
+    return f"{corpo}\n\n{retorno}\n\n{fechamento}"
 
 # =========================
 # CHAT
@@ -84,18 +105,18 @@ for msg in st.session_state.chat:
 # =========================
 # INPUT
 # =========================
-user_input = st.chat_input("Me conte um pouco do que está acontecendo com você atualmente.")
+user_input = st.chat_input("Me conte o que está acontecendo com você...")
 
 if user_input:
 
     st.session_state.chat.append({"role": "user", "content": user_input})
 
-    # 🔥 atualiza contexto acumulado
-    st.session_state.contexto_acumulado += " " + user_input
+    fase = detectar_fase(user_input)
+    st.session_state.fase = fase
 
-    item = buscar(user_input, st.session_state.contexto_acumulado)
+    item = buscar(user_input)
 
-    resposta = gerar_resposta(user_input, item, st.session_state.contexto_acumulado)
+    resposta = gerar_resposta(user_input, item, fase)
 
     st.session_state.chat.append({"role": "assistant", "content": resposta})
 
