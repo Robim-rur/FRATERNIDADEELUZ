@@ -9,13 +9,15 @@ from sentence_transformers import SentenceTransformer
 st.set_page_config(page_title="Reflexões e Direcionamento", layout="centered")
 
 st.title("💬 Reflexões e Direcionamento Pessoal")
-st.write("Converse livremente e receba uma reflexão útil e coerente.")
 
 # =========================
-# CHAT
+# MEMÓRIA DE CONVERSA
 # =========================
 if "chat" not in st.session_state:
     st.session_state.chat = []
+
+if "contexto_acumulado" not in st.session_state:
+    st.session_state.contexto_acumulado = ""
 
 # =========================
 # BASE
@@ -25,57 +27,52 @@ with open("base.json", "r", encoding="utf-8") as f:
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# FILTRO MAIS ESTRITO (evita lixo silencioso)
 data = [
     item for item in raw_data
-    if item.get("contexto")
-    and item.get("mensagem")
-    and len(item["mensagem"].strip()) > 30
+    if item.get("contexto") and item.get("mensagem")
 ]
 
 texts = [item["contexto"] for item in data]
 embeddings = model.encode(texts)
 
 # =========================
-# BUSCA COM LIMIAR DE CONFIANÇA (ESSENCIAL)
+# BUSCA COM CONTEXTO ACUMULADO
 # =========================
-def buscar(pergunta):
+def buscar(pergunta, contexto_total):
 
-    emb = model.encode([pergunta])[0]
+    entrada = pergunta + " " + contexto_total
+
+    emb = model.encode([entrada])[0]
 
     sim = np.dot(embeddings, emb) / (
         np.linalg.norm(embeddings, axis=1) * np.linalg.norm(emb)
     )
 
-    best_idx = np.argmax(sim)
-    best_score = sim[best_idx]
+    idx = np.argmax(sim)
 
-    # 🔥 AQUI ESTÁ A CORREÇÃO REAL
-    # se a confiança for baixa → NÃO inventa resposta falsa
-    if best_score < 0.25:
-        return None
-
-    return data[best_idx]
+    return data[idx]
 
 # =========================
-# RESPOSTA
+# RESPOSTA CONTÍNUA (IMPORTANTE)
 # =========================
-def gerar(pergunta, item):
-
-    if not item:
-        return (
-            "Entendi o que você está passando. Às vezes, quando tudo parece pesado ao mesmo tempo, "
-            "o mais importante é focar no próximo passo possível, mesmo que pequeno. "
-            "Se quiser, me conte um pouco mais da sua situação para eu te ajudar melhor."
-        )
+def gerar_resposta(pergunta, item, contexto_total):
 
     corpo = item["mensagem"]
 
+    # DETECTA EVOLUÇÃO DA CRISE
+    if "comer" in pergunta.lower() or "fome" in pergunta.lower():
+        continuidade = (
+            "Quando a dificuldade atinge necessidades básicas, o foco precisa ser ainda mais imediato e prático, "
+            "priorizando soluções de curto prazo e apoio externo sempre que possível."
+        )
+    else:
+        continuidade = ""
+
     fechamento = (
-        "Se quiser, me conta mais detalhes — isso ajuda a organizar melhor o que você está vivendo e encontrar caminhos mais claros."
+        "Se quiser, continue me contando — vou te ajudando a organizar isso passo a passo, sem pressa e sem sobrecarga."
     )
 
-    return f"{corpo}\n\n{fechamento}"
+    return f"{corpo} {continuidade}\n\n{fechamento}"
 
 # =========================
 # CHAT
@@ -93,8 +90,12 @@ if user_input:
 
     st.session_state.chat.append({"role": "user", "content": user_input})
 
-    item = buscar(user_input)
-    resposta = gerar(user_input, item)
+    # 🔥 atualiza contexto acumulado
+    st.session_state.contexto_acumulado += " " + user_input
+
+    item = buscar(user_input, st.session_state.contexto_acumulado)
+
+    resposta = gerar_resposta(user_input, item, st.session_state.contexto_acumulado)
 
     st.session_state.chat.append({"role": "assistant", "content": resposta})
 
